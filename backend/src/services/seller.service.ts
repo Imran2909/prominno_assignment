@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { Product } from '../models/Product.js';
 import { Seller } from '../models/Seller.js';
 import { AppError } from '../utils/AppError.js';
 import { httpStatus } from '../utils/httpStatus.js';
@@ -58,4 +59,14 @@ export const listSellers = async ({ page, limit }: PaginationInput) => {
       totalPages: Math.ceil(total / limit) || 1
     }
   };
+};
+
+export const deleteSeller = async (sellerId: string): Promise<void> => {
+  const seller = await Seller.findByIdAndDelete(sellerId);
+
+  if (!seller) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Seller not found');
+  }
+
+  await Product.deleteMany({ sellerId });
 };

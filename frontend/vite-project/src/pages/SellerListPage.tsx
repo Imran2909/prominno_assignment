@@ -1,8 +1,8 @@
 import { Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
-import { getSellers } from '../api/adminApi';
+import { deleteSeller, getSellers } from '../api/adminApi';
 import { getErrorMessage } from '../api/client';
 import { EmptyState } from '../components/EmptyState';
 import { Pagination } from '../components/Pagination';
@@ -18,23 +18,45 @@ export function SellerListPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  const loadSellers = useCallback(async (): Promise<void> => {
+    setIsLoading(true);
+
+    try {
+      const data = await getSellers(pagination.page, pagination.limit);
+      setSellers(data.items);
+      setPagination(data.pagination);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pagination.limit, pagination.page]);
+
   useEffect(() => {
-    const loadSellers = async (): Promise<void> => {
-      setIsLoading(true);
-
-      try {
-        const data = await getSellers(pagination.page, pagination.limit);
-        setSellers(data.items);
-        setPagination(data.pagination);
-      } catch (error) {
-        toast.error(getErrorMessage(error));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     void loadSellers();
-  }, [pagination.page, pagination.limit]);
+  }, [loadSellers]);
+
+  const handleDeleteSeller = async (seller: Seller): Promise<void> => {
+    const confirmed = window.confirm(`Delete ${seller.name}? This will also delete this seller's products.`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteSeller(seller._id);
+      toast.success('Seller deleted successfully');
+      await loadSellers();
+    } catch (error) {
+      if (getErrorMessage(error).toLowerCase().includes('seller not found')) {
+        toast.success('Seller already removed');
+        await loadSellers();
+        return;
+      }
+
+      toast.error(getErrorMessage(error));
+    }
+  };
 
   return (
     <section className="page-stack">
@@ -76,7 +98,7 @@ export function SellerListPage() {
                       <td>{seller.mobileNo}</td>
                       <td>{seller.gender}</td>
                       <td>
-                        <button type="button" className="danger-icon" disabled aria-label="Delete disabled">
+                        <button type="button" className="danger-icon" onClick={() => void handleDeleteSeller(seller)} aria-label="Delete seller">
                           <Trash2 size={14} />
                         </button>
                       </td>

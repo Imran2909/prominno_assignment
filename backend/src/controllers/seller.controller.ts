@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { createSeller, listSellers } from '../services/seller.service.js';
+import { createSeller, deleteSeller, listSellers } from '../services/seller.service.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { httpStatus } from '../utils/httpStatus.js';
 
@@ -13,4 +13,10 @@ export const listSellersController = async (req: Request, res: Response): Promis
   const limit = Number(req.validatedQuery?.limit ?? 10);
   const data = await listSellers({ page, limit });
   sendSuccess(res, httpStatus.OK, 'Sellers fetched successfully', data);
+};
+
+export const deleteSellerController = async (req: Request, res: Response): Promise<void> => {
+  console.log("xxxxxxxxxxxxxxx")
+  await deleteSeller(String(req.params.id));
+  sendSuccess(res, httpStatus.OK, 'Seller deleted successfully');
 };

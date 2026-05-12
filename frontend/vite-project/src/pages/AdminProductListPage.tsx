@@ -1,6 +1,7 @@
+import { Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { getAdminProducts } from '../api/adminApi';
+import { downloadAdminProductPdf, getAdminProducts } from '../api/adminApi';
 import { getErrorMessage } from '../api/client';
 import { EmptyState } from '../components/EmptyState';
 import { Pagination } from '../components/Pagination';
@@ -8,14 +9,6 @@ import type { Pagination as PaginationType, Product } from '../types/api';
 
 const getTotalPrice = (product: Product): number => {
   return product.brands.reduce((sum, brand) => sum + Number(brand.price), 0);
-};
-
-const getSellerName = (product: Product): string => {
-  if (!product.sellerId) {
-    return 'Deleted seller';
-  }
-
-  return typeof product.sellerId === 'string' ? 'Seller' : product.sellerId.name;
 };
 
 export function AdminProductListPage() {
@@ -46,6 +39,17 @@ export function AdminProductListPage() {
     void loadProducts();
   }, [pagination.page, pagination.limit]);
 
+  const handlePdf = async (product: Product): Promise<void> => {
+    try {
+      const blob = await downloadAdminProductPdf(product._id);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
   return (
     <section className="page-stack">
       <div className="section-title">Product</div>
@@ -63,10 +67,9 @@ export function AdminProductListPage() {
                   <tr>
                     <th>#</th>
                     <th>Product Name</th>
-                    <th>Seller</th>
                     <th>Description</th>
-                    <th>Brands</th>
                     <th>Price</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -74,10 +77,14 @@ export function AdminProductListPage() {
                     <tr key={product._id}>
                       <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
                       <td>{product.productName}</td>
-                      <td>{getSellerName(product)}</td>
                       <td>{product.productDescription}</td>
-                      <td>{product.brands.length}</td>
                       <td>Rs.{getTotalPrice(product).toFixed(2)}/-</td>
+                      <td>
+                        <button type="button" className="purple-button" onClick={() => void handlePdf(product)}>
+                          <Download size={14} />
+                          Download PDF
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

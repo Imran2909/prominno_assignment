@@ -26,9 +26,21 @@ export const getSellers = async (page: number, limit: number): Promise<Paginated
   return response.data.data;
 };
 
+export const deleteSeller = async (id: string): Promise<void> => {
+  await apiClient.delete(`/admin/sellers/${id}`);
+};
+
 export const getAdminProducts = async (page: number, limit: number): Promise<PaginatedResult<Product>> => {
   const response = await apiClient.get<ApiResponse<PaginatedResult<Product>>>('/admin/products', {
     params: { page, limit }
   });
   return response.data.data;
+};
+
+export const downloadAdminProductPdf = async (id: string): Promise<Blob> => {
+  const response = await apiClient.get(`/admin/products/${id}/pdf`, {
+    responseType: 'blob'
+  });
+
+  return response.data as Blob;
 };

@@ -91,3 +91,13 @@ export const getProductPdf = async (sellerId: string, productId: string) => {
 
   return createProductPdf(product);
 };
+
+export const getAdminProductPdf = async (productId: string) => {
+  const product = await Product.findById(productId);
+
+  if (!product) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Product not found');
+  }
+
+  return createProductPdf(product);
+};

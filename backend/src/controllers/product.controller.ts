@@ -1,5 +1,12 @@
 import type { Request, Response } from 'express';
-import { createProduct, deleteProduct, getProductPdf, listAllProducts, listProducts } from '../services/product.service.js';
+import {
+  createProduct,
+  deleteProduct,
+  getAdminProductPdf,
+  getProductPdf,
+  listAllProducts,
+  listProducts
+} from '../services/product.service.js';
 import { AppError } from '../utils/AppError.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { httpStatus } from '../utils/httpStatus.js';
@@ -39,6 +46,15 @@ export const deleteProductController = async (req: Request, res: Response): Prom
 export const productPdfController = async (req: Request, res: Response): Promise<void> => {
   const productId = String(req.params.id);
   const pdfBuffer = await getProductPdf(getSellerId(req), productId);
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="product-${productId}.pdf"`);
+  res.status(httpStatus.OK).send(pdfBuffer);
+};
+
+export const adminProductPdfController = async (req: Request, res: Response): Promise<void> => {
+  const productId = String(req.params.id);
+  const pdfBuffer = await getAdminProductPdf(productId);
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="product-${productId}.pdf"`);
