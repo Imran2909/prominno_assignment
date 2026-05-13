@@ -10,6 +10,8 @@ interface LoginPageProps {
   role: Role;
 }
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function LoginPage({ role }: LoginPageProps) {
   const navigate = useNavigate();
   const [email, setEmail] = useState(role === 'admin' ? 'admin@prominno.com' : '');
@@ -19,10 +21,32 @@ export function LoginPage({ role }: LoginPageProps) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    if (!emailPattern.test(email.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6 || password.length > 128) {
+      toast.error('Password must contain 6 to 128 characters');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const result = isAdmin ? await loginAdmin({ email, password }) : await loginSeller({ email, password });
+      const result = isAdmin
+        ? await loginAdmin({ email: email.trim(), password })
+        : await loginSeller({ email: email.trim(), password });
+
+      if (result.user.role !== role) {
+        throw new Error('Logged-in user does not have access to this portal');
+      }
+
       authStorage.setSession(result.accessToken, result.user);
       toast.success(`${result.user.role} login successful`);
       navigate(isAdmin ? '/admin/sellers' : '/seller/products', { replace: true });

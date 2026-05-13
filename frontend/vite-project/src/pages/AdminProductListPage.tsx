@@ -43,7 +43,10 @@ export function AdminProductListPage() {
     try {
       const blob = await downloadAdminProductPdf(product._id);
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const pdfWindow = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!pdfWindow) {
+        toast.error('Popup blocked. Please allow popups to view the PDF.');
+      }
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error) {
       toast.error(getErrorMessage(error));

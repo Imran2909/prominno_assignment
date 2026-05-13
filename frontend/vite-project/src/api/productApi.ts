@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, unwrapApiData } from './client';
 import type { ApiResponse, Brand, PaginatedResult, Product } from '../types/api';
 
 export interface CreateProductPayload {
@@ -9,14 +9,14 @@ export interface CreateProductPayload {
 
 export const createProduct = async (payload: CreateProductPayload): Promise<Product> => {
   const response = await apiClient.post<ApiResponse<Product>>('/seller/products', payload);
-  return response.data.data;
+  return unwrapApiData(response);
 };
 
 export const getProducts = async (page: number, limit: number): Promise<PaginatedResult<Product>> => {
   const response = await apiClient.get<ApiResponse<PaginatedResult<Product>>>('/seller/products', {
     params: { page, limit }
   });
-  return response.data.data;
+  return unwrapApiData(response);
 };
 
 export const deleteProduct = async (id: string): Promise<void> => {

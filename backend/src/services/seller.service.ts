@@ -24,6 +24,12 @@ interface PaginationInput {
 const sellerProjection = '-passwordHash -__v';
 
 export const createSeller = async (input: CreateSellerInput) => {
+  const skills = [...new Set(input.skills.map((skill) => skill.trim()).filter(Boolean))];
+
+  if (skills.length === 0) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'At least one skill is required');
+  }
+
   const existingSeller = await Seller.findOne({
     $or: [{ email: input.email }, { mobileNo: input.mobileNo }]
   });
@@ -36,6 +42,7 @@ export const createSeller = async (input: CreateSellerInput) => {
   const passwordHash = await bcrypt.hash(input.password, 12);
   const seller = await Seller.create({
     ...input,
+    skills,
     passwordHash,
     role: 'seller'
   });
@@ -62,11 +69,17 @@ export const listSellers = async ({ page, limit }: PaginationInput) => {
 };
 
 export const deleteSeller = async (sellerId: string): Promise<void> => {
-  const seller = await Seller.findByIdAndDelete(sellerId);
+  const seller = await Seller.exists({ _id: sellerId });
 
   if (!seller) {
     throw new AppError(httpStatus.NOT_FOUND, 'Seller not found');
   }
 
   await Product.deleteMany({ sellerId });
+
+  const deleteResult = await Seller.deleteOne({ _id: sellerId });
+
+  if (deleteResult.deletedCount === 0) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Seller not found');
+  }
 };

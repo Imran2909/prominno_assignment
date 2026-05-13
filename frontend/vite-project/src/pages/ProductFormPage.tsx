@@ -20,6 +20,49 @@ const initialForm: CreateProductPayload = {
   brands: [emptyBrand()]
 };
 
+const maxBrands = 20;
+const maxPrice = 10_000_000;
+
+const validateProductForm = (form: CreateProductPayload): string | null => {
+  if (form.productName.trim().length < 2 || form.productName.trim().length > 120) {
+    return 'Product name must contain 2 to 120 characters';
+  }
+
+  if (form.productDescription.trim().length < 2 || form.productDescription.trim().length > 1000) {
+    return 'Product description must contain 2 to 1000 characters';
+  }
+
+  if (form.brands.length === 0) {
+    return 'At least one brand is required';
+  }
+
+  if (form.brands.length > maxBrands) {
+    return `A product can have at most ${maxBrands} brands`;
+  }
+
+  for (const [index, brand] of form.brands.entries()) {
+    const brandNumber = index + 1;
+
+    if (brand.brandName.trim().length < 2 || brand.brandName.trim().length > 100) {
+      return `Brand #${brandNumber} name must contain 2 to 100 characters`;
+    }
+
+    if (brand.detail.trim().length < 2 || brand.detail.trim().length > 1000) {
+      return `Brand #${brandNumber} detail must contain 2 to 1000 characters`;
+    }
+
+    if (!brand.image) {
+      return `Brand #${brandNumber} image is required`;
+    }
+
+    if (!Number.isFinite(brand.price) || brand.price <= 0 || brand.price > maxPrice) {
+      return `Brand #${brandNumber} price must be between 1 and ${maxPrice}`;
+    }
+  }
+
+  return null;
+};
+
 export function ProductFormPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState<CreateProductPayload>(initialForm);
@@ -48,16 +91,27 @@ export function ProductFormPage() {
     try {
       const image = await fileToBase64(file);
       updateBrand(index, 'image', image);
-    } catch {
-      toast.error('Unable to read image');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      event.target.value = '';
     }
   };
 
   const addBrand = (): void => {
+    if (form.brands.length >= maxBrands) {
+      toast.error(`A product can have at most ${maxBrands} brands`);
+      return;
+    }
+
     setForm((current) => ({ ...current, brands: [...current.brands, emptyBrand()] }));
   };
 
   const removeBrand = (index: number): void => {
+    if (form.brands.length === 1) {
+      toast.error('At least one brand is required');
+      return;
+    }
+
     setForm((current) => ({
       ...current,
       brands: current.brands.filter((_brand, brandIndex) => brandIndex !== index)
@@ -66,10 +120,29 @@ export function ProductFormPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    const validationError = validateProductForm(form);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await createProduct(form);
+      await createProduct({
+        productName: form.productName.trim(),
+        productDescription: form.productDescription.trim(),
+        brands: form.brands.map((brand) => ({
+          ...brand,
+          brandName: brand.brandName.trim(),
+          detail: brand.detail.trim()
+        }))
+      });
       toast.success('Product created successfully');
       navigate('/seller/products');
     } catch (error) {
@@ -144,6 +217,7 @@ export function ProductFormPage() {
                   onChange={(event) => updateBrand(index, 'price', Number(event.target.value))}
                   type="number"
                   min={1}
+                  max={maxPrice}
                   step="0.01"
                   placeholder="Rs. 0/-"
                   required

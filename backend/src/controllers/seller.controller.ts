@@ -16,7 +16,6 @@ export const listSellersController = async (req: Request, res: Response): Promis
 };
 
 export const deleteSellerController = async (req: Request, res: Response): Promise<void> => {
-  console.log("xxxxxxxxxxxxxxx")
   await deleteSeller(String(req.params.id));
   sendSuccess(res, httpStatus.OK, 'Seller deleted successfully');
 };

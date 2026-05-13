@@ -46,15 +46,21 @@ export function SellerListPage() {
     try {
       await deleteSeller(seller._id);
       toast.success('Seller deleted successfully');
-      await loadSellers();
+      if (sellers.length === 1 && pagination.page > 1) {
+        setPagination((current) => ({ ...current, page: current.page - 1 }));
+      } else {
+        await loadSellers();
+      }
     } catch (error) {
-      if (getErrorMessage(error).toLowerCase().includes('seller not found')) {
+      const message = getErrorMessage(error);
+
+      if (message.toLowerCase().includes('seller not found')) {
         toast.success('Seller already removed');
         await loadSellers();
         return;
       }
 
-      toast.error(getErrorMessage(error));
+      toast.error(message);
     }
   };
 

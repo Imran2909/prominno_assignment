@@ -44,7 +44,10 @@ export function ProductListPage() {
     try {
       const blob = await downloadProductPdf(product._id);
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const pdfWindow = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!pdfWindow) {
+        toast.error('Popup blocked. Please allow popups to view the PDF.');
+      }
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -61,9 +64,21 @@ export function ProductListPage() {
     try {
       await deleteProduct(product._id);
       toast.success('Product deleted');
-      await loadProducts();
+      if (products.length === 1 && pagination.page > 1) {
+        setPagination((current) => ({ ...current, page: current.page - 1 }));
+      } else {
+        await loadProducts();
+      }
     } catch (error) {
-      toast.error(getErrorMessage(error));
+      const message = getErrorMessage(error);
+
+      if (message.toLowerCase().includes('product not found')) {
+        toast.success('Product already removed');
+        await loadProducts();
+        return;
+      }
+
+      toast.error(message);
     }
   };
 

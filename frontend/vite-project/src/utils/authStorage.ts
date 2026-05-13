@@ -4,9 +4,21 @@ const tokenKey = 'prominno_access_token';
 const userKey = 'prominno_user';
 
 export const authStorage = {
-  getToken: (): string | null => localStorage.getItem(tokenKey),
+  getToken: (): string | null => {
+    try {
+      return localStorage.getItem(tokenKey);
+    } catch {
+      return null;
+    }
+  },
   getUser: (): AuthUser | null => {
-    const rawUser = localStorage.getItem(userKey);
+    let rawUser: string | null;
+
+    try {
+      rawUser = localStorage.getItem(userKey);
+    } catch {
+      return null;
+    }
 
     if (!rawUser) {
       return null;
@@ -21,11 +33,19 @@ export const authStorage = {
   },
   getRole: (): Role | null => authStorage.getUser()?.role ?? null,
   setSession: (token: string, user: AuthUser): void => {
-    localStorage.setItem(tokenKey, token);
-    localStorage.setItem(userKey, JSON.stringify(user));
+    try {
+      localStorage.setItem(tokenKey, token);
+      localStorage.setItem(userKey, JSON.stringify(user));
+    } catch {
+      throw new Error('Unable to save login session in this browser');
+    }
   },
   clear: (): void => {
-    localStorage.removeItem(tokenKey);
-    localStorage.removeItem(userKey);
+    try {
+      localStorage.removeItem(tokenKey);
+      localStorage.removeItem(userKey);
+    } catch {
+      // Storage may be blocked by the browser; nothing else is needed here.
+    }
   }
 };

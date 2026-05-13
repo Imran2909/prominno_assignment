@@ -21,6 +21,66 @@ const initialForm: CreateSellerPayload = {
   confirmPassword: ''
 };
 
+const maxSkills = 20;
+const mobilePattern = /^[0-9]{10,15}$/;
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validateSellerStep = (form: CreateSellerPayload, step: number): string | null => {
+  if (step === 1) {
+    if (!form.profileImage) {
+      return 'Profile image is required';
+    }
+
+    if (form.name.trim().length < 2 || form.name.trim().length > 80) {
+      return 'Name must contain 2 to 80 characters';
+    }
+
+    if (!mobilePattern.test(form.mobileNo.trim())) {
+      return 'Mobile number must contain 10 to 15 digits';
+    }
+  }
+
+  if (step === 2 && (!form.country || !form.state)) {
+    return 'Country and state are required';
+  }
+
+  if (step === 3) {
+    const skills = form.skills.map((skill) => skill.trim()).filter(Boolean);
+
+    if (skills.length === 0) {
+      return 'At least one skill is required';
+    }
+
+    if (skills.length > maxSkills) {
+      return `A seller can have at most ${maxSkills} skills`;
+    }
+
+    if (new Set(skills.map((skill) => skill.toLowerCase())).size !== skills.length) {
+      return 'Skills must be unique';
+    }
+
+    if (skills.some((skill) => skill.length < 2 || skill.length > 50)) {
+      return 'Each skill must contain 2 to 50 characters';
+    }
+  }
+
+  if (step === 4) {
+    if (!emailPattern.test(form.email.trim())) {
+      return 'Please enter a valid email address';
+    }
+
+    if (form.password.length < 6 || form.password.length > 128) {
+      return 'Password must contain 6 to 128 characters';
+    }
+
+    if (form.password !== form.confirmPassword) {
+      return 'Confirm password must match password';
+    }
+  }
+
+  return null;
+};
+
 export function SellerFormPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -40,6 +100,11 @@ export function SellerFormPage() {
   };
 
   const addSkill = (): void => {
+    if (form.skills.length >= maxSkills) {
+      toast.error(`A seller can have at most ${maxSkills} skills`);
+      return;
+    }
+
     setForm((current) => ({ ...current, skills: [...current.skills, ''] }));
   };
 
@@ -59,21 +124,27 @@ export function SellerFormPage() {
 
     try {
       updateField('profileImage', await fileToBase64(file));
-    } catch {
-      toast.error('Unable to read profile image');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      event.target.value = '';
     }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
 
+    const validationError = validateSellerStep(form, step);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     if (step < 4) {
       setStep((current) => current + 1);
       return;
     }
 
-    if (form.password !== form.confirmPassword) {
-      toast.error('Confirm password must match password');
+    if (isSubmitting) {
       return;
     }
 
@@ -82,6 +153,11 @@ export function SellerFormPage() {
     try {
       await createSeller({
         ...form,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        mobileNo: form.mobileNo.trim(),
+        country: form.country.trim(),
+        state: form.state.trim(),
         skills: form.skills.map((skill) => skill.trim()).filter(Boolean)
       });
       toast.success('Seller created successfully');
@@ -104,7 +180,7 @@ export function SellerFormPage() {
             const isComplete = number < step;
             return (
               <div className="step" key={label}>
-                <span className={number <= step ? 'step-dot active' : 'step-dot'}>{isComplete ? '✓' : number}</span>
+                <span className={number <= step ? 'step-dot active' : 'step-dot'}>{isComplete ? 'OK' : number}</span>
                 <small>{label}</small>
               </div>
             );
@@ -156,6 +232,7 @@ export function SellerFormPage() {
                 value={form.mobileNo}
                 onChange={(event) => updateField('mobileNo', event.target.value)}
                 inputMode="numeric"
+                pattern="[0-9]{10,15}"
                 placeholder="Phone Number"
                 required
               />

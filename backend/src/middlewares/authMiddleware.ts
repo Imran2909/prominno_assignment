@@ -13,6 +13,11 @@ export const authMiddleware = (req: Request, _res: Response, next: NextFunction)
 
   try {
     const token = authHeader.split(' ')[1];
+    if (!token) {
+      next(new AppError(httpStatus.UNAUTHORIZED, 'Authorization token is required'));
+      return;
+    }
+
     req.user = verifyToken(token);
     next();
   } catch {
